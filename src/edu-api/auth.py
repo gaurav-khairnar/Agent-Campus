@@ -2,7 +2,7 @@ import jwt as pyjwt
 from config import get_settings
 from edu_core.schemas.users import UserDto
 from edu_core.services import UserService
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 security_scheme = HTTPBearer(auto_error=False)
@@ -13,15 +13,7 @@ def get_current_user(
 ) -> UserDto:
     """
     Get the current authenticated user from Supabase JWT token.
-
-    Args:
-        credentials: HTTP Bearer token credentials
-
-    Returns:
-        UserDto: The authenticated user
-
-    Raises:
-        HTTPException: If authentication fails or user not found
+    Decodes identity, role, and institution scope from database.
     """
     settings = get_settings()
     supabase_jwt_secret = settings.supabase_jwt_secret
@@ -42,17 +34,13 @@ def get_current_user(
     token = credentials.credentials
 
     try:
-        # For debugging: Peek at the header without verification
         try:
             unverified_header = pyjwt.get_unverified_header(token)
             alg = unverified_header.get("alg")
         except Exception:
             alg = "HS256"
-            print("Could not peek at token header")
 
-        # Verify and decode Supabase JWT token
         if alg.startswith("HS"):
-            # Symmetric verification
             payload = pyjwt.decode(
                 token,
                 supabase_jwt_secret,
@@ -60,7 +48,6 @@ def get_current_user(
                 options={"verify_aud": False},
             )
         else:
-            # Asymmetric verification using JWKS
             supabase_url = settings.supabase_url
             if not supabase_url:
                 raise HTTPException(
@@ -68,7 +55,6 @@ def get_current_user(
                     detail="SUPABASE_URL must be configured for asymmetric JWT verification",
                 )
 
-            # Use JWKS to fetch public keys
             jwks_url = f"{supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
             jwks_client = pyjwt.PyJWKClient(jwks_url)
             signing_key = jwks_client.get_signing_key_from_jwt(token)
@@ -80,7 +66,6 @@ def get_current_user(
                 options={"verify_aud": False},
             )
 
-        # Extract Supabase user ID (sub claim) - this is the UUID from auth.users
         supabase_user_id = payload.get("sub")
         if not supabase_user_id:
             raise HTTPException(
@@ -88,19 +73,12 @@ def get_current_user(
                 detail="Invalid token: missing user ID",
             )
 
-        # Extract user information from token
         email = payload.get("email")
-        # Supabase tokens include user_metadata and app_metadata
         user_metadata = payload.get("user_metadata", {})
-        payload.get("app_metadata", {})
-
-        # Get name from user_metadata or email
         name = user_metadata.get("name") or user_metadata.get("full_name")
         if not name and email:
-            # Fallback to email username part
             name = email.split("@")[0]
 
-        # Use UserService to get or create user (doesn't expose DB directly)
         user_service = UserService()
         user_dto = user_service.get_or_create_user_from_token(
             user_id=supabase_user_id,
@@ -129,13 +107,26 @@ def get_current_user(
         )
 
 
+def require_roles(allowed_roles: list[str]):
+    """
+    FastAPI dependency factory enforcing strict RBAC.
+    """
+    def role_checker(current_user: UserDto = Depends(get_current_user)) -> UserDto:
+        user_role = (current_user.role or "student").lower()
+        allowed = [r.lower() for r in allowed_roles]
+        if user_role not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied: Role '{user_role}' is not authorized. Required: {allowed_roles}",
+            )
+        return current_user
+
+    return role_checker
+
+
 def get_current_user_optional(
     credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
 ) -> UserDto | None:
-    """
-    Get the current user if authenticated, otherwise return None.
-    Useful for endpoints that work with or without authentication.
-    """
     if not credentials:
         return None
 
