@@ -112,12 +112,12 @@ export const SignInPage = () => {
           <div className="text-center text-xs text-muted-foreground">
             By signing in, you agree to our{' '}
             <a
-              href="https://github.com/StudentTraineeCenter/edu-agent/blob/master/docs/PRIVACY_POLICY.md"
+              href="https://github.com/gaurav-khairnar/Agent-Campus/blob/main/README.md"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
             >
-              Privacy Policy
+              Privacy Policy & Terms
             </a>
           </div>
 
