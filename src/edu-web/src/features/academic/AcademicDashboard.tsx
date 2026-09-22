@@ -1,16 +1,18 @@
 import React from "react";
-import { Shield, Building2, GraduationCap, BookOpen, Lock, UserCheck, Key } from "lucide-react";
-import { useAuth, DEMO_ACCOUNTS } from "@/hooks/use-auth";
+import { Shield, Building2, GraduationCap, BookOpen, Lock, LogOut, Sparkles } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import AdminWorkspace from "./roles/AdminWorkspace";
 import CoordinatorWorkspace from "./roles/CoordinatorWorkspace";
 import FacultyWorkspace from "./roles/FacultyWorkspace";
 import StudentWorkspace from "./roles/StudentWorkspace";
 
 export const AcademicDashboard: React.FC = () => {
-  const { user, switchDemoUser, isLoading } = useAuth();
+  const { user, logout, isLoading } = useAuth();
 
-  // Active Session Role & Tenant Scoping
+  // Production Session-Scoped Authority
   const userRole = (user?.role || "coordinator").toLowerCase();
+  const userName = user?.name || "Dr. Sarah Connor";
+  const userEmail = user?.email || "coordinator@agentcampus.edu";
   const institutionId = user?.institution_id || "11111111-1111-1111-1111-111111111111";
 
   if (isLoading) {
@@ -23,7 +25,7 @@ export const AcademicDashboard: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto min-h-screen bg-background">
-      {/* Server-Authenticated Security Banner with Dev Identity Selector */}
+      {/* Session Security Banner */}
       <div className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         {/* User Identity & Authority Context */}
         <div className="flex items-center gap-3">
@@ -32,41 +34,23 @@ export const AcademicDashboard: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-              AgentCampus Academic Portal
+              AgentCampus Portal
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Authenticated Session: <strong className="text-foreground">{user?.name}</strong> (<span className="font-mono">{user?.email}</span>)
+              Authenticated Session: <strong className="text-foreground">{userName}</strong> ({userEmail})
             </p>
           </div>
         </div>
 
-        {/* Security & Dev Demo Identity Controls */}
+        {/* Security Badges & Logout Action */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Dev Test Identity Switcher */}
-          <div className="flex items-center gap-1.5 bg-muted/70 p-1.5 rounded-xl border">
-            <span className="text-xs font-bold text-muted-foreground flex items-center gap-1 px-1">
-              <Key className="h-3.5 w-3.5 text-amber-500" /> Test Identity:
-            </span>
-            <select
-              value={user?.email || DEMO_ACCOUNTS[1].email}
-              onChange={(e) => {
-                const acc = DEMO_ACCOUNTS.find((a) => a.email === e.target.value);
-                if (acc) switchDemoUser(acc);
-              }}
-              className="bg-background text-foreground text-xs font-bold px-2.5 py-1 rounded-lg border shadow-sm cursor-pointer"
-            >
-              {DEMO_ACCOUNTS.map((acc) => (
-                <option key={acc.id} value={acc.email}>
-                  {acc.role === "admin" && "🛡️ Admin — Elena Rostova"}
-                  {acc.role === "coordinator" && "📋 Coordinator — Dr. Sarah Connor"}
-                  {acc.role === "faculty" && "🎓 Faculty — Prof. Alan Turing"}
-                  {acc.role === "student" && "🎒 Student — Alex Johnson"}
-                </option>
-              ))}
-            </select>
+          {/* Tenant Scope Badge */}
+          <div className="px-3 py-1.5 rounded-xl bg-muted/70 border text-xs font-bold text-foreground flex items-center gap-1.5">
+            <Building2 className="h-3.5 w-3.5 text-indigo-500" />
+            Tenant: <span className="font-mono text-[11px] text-muted-foreground">{institutionId.substring(0, 8)}...</span>
           </div>
 
-          {/* Active Role Security Badge */}
+          {/* Role Authority Badge */}
           <div
             className={`px-3 py-1.5 rounded-xl text-xs font-extrabold uppercase flex items-center gap-1.5 border shadow-sm ${
               userRole === "admin"
@@ -82,8 +66,16 @@ export const AcademicDashboard: React.FC = () => {
             {userRole === "coordinator" && <Building2 className="h-3.5 w-3.5" />}
             {userRole === "faculty" && <GraduationCap className="h-3.5 w-3.5" />}
             {userRole === "student" && <BookOpen className="h-3.5 w-3.5" />}
-            Role: {userRole}
+            Authority: {userRole}
           </div>
+
+          {/* Sign Out / Switch Account */}
+          <button
+            onClick={() => logout()}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-destructive/20 bg-destructive/10 hover:bg-destructive/20 text-destructive text-xs font-bold transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Switch Account
+          </button>
         </div>
       </div>
 
