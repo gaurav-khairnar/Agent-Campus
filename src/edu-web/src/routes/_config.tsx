@@ -82,6 +82,16 @@ const DashboardPage = lazy(() =>
     default: m.DashboardPage,
   })),
 )
+const AcademicRoute = lazy(() =>
+  import('./academic-route').then((m) => ({
+    default: m.AcademicRoute,
+  })),
+)
+const AIApprovalRoute = lazy(() =>
+  import('./ai-approval-route').then((m) => ({
+    default: m.AIApprovalRoute,
+  })),
+)
 
 const requireAuth = async () => {
   // Check if user is authenticated by checking Supabase session
@@ -164,6 +174,26 @@ export const dashboardIndexRoute = createRoute({
   component: () => (
     <Suspense fallback={<LoadingPage />}>
       <DashboardPage />
+    </Suspense>
+  ),
+})
+
+export const academicRoute = createRoute({
+  path: '/academic',
+  getParentRoute: () => dashboardRoute,
+  component: () => (
+    <Suspense fallback={<LoadingPage />}>
+      <AcademicRoute />
+    </Suspense>
+  ),
+})
+
+export const aiApprovalRoute = createRoute({
+  path: '/ai-approval',
+  getParentRoute: () => dashboardRoute,
+  component: () => (
+    <Suspense fallback={<LoadingPage />}>
+      <AIApprovalRoute />
     </Suspense>
   ),
 })
@@ -281,6 +311,8 @@ export const settingsRoute = createRoute({
 export const routeTree = rootRoute.addChildren([
   dashboardRoute.addChildren([
     dashboardIndexRoute,
+    academicRoute,
+    aiApprovalRoute,
     projectDetailRoute,
     chatDetailRoute,
     documentDetailRoute,
